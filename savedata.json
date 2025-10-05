@@ -1,0 +1,58 @@
+{
+  "version": 6,
+  "gold": 3424.2999999999993,
+  "lifetime_gold": 8553.5,
+  "diamonds": 0,
+  "base_dice": 1,
+  "slots_unlocked": true,
+  "upgrades": [
+    {
+      "key": "dice_qty_1",
+      "level": 22
+    },
+    {
+      "key": "dice_qty_2",
+      "level": 0
+    },
+    {
+      "key": "dice_qty_3",
+      "level": 0
+    },
+    {
+      "key": "dice_qty_4",
+      "level": 0
+    },
+    {
+      "key": "dice_qty_5",
+      "level": 0
+    },
+    {
+      "key": "faster_roller_1",
+      "level": 9
+    },
+    {
+      "key": "faster_roller_2",
+      "level": 0
+    },
+    {
+      "key": "faster_roller_3",
+      "level": 0
+    },
+    {
+      "key": "die_sides_1",
+      "level": 0
+    },
+    {
+      "key": "die_sides_2",
+      "level": 0
+    },
+    {
+      "key": "slots_passive_1",
+      "level": 1
+    },
+    {
+      "key": "slots_passive_2",
+      "level": 0
+    }
+  ]
+}
