@@ -1,10 +1,12 @@
 # main.py
-import os, sys
+import sys
 from pathlib import Path
+
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QTabWidget, QStackedWidget, QHBoxLayout, QMessageBox
+    QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QTabWidget, QStackedWidget,
+    QMessageBox, QDialog, QFormLayout, QCheckBox, QHBoxLayout
 )
 
 from game import Game, SAVE_PATH
@@ -14,6 +16,7 @@ from ui_mainmenu import MainMenu
 from ui_inventory import InventoryTab
 from ui_loadout import LoadoutTab
 from modes import DiceGame, SlotsGame
+from settings import load_settings, save_settings
 
 QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
     Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
@@ -21,6 +24,50 @@ QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
 
 APP_TITLE = "Idle Dice Casino"
 
+# ---------------- Settings Dialog ----------------
+class SettingsDialog(QDialog):
+    def __init__(self, main_window: "MainWindow"):
+        super().__init__(main_window)
+        self.mw = main_window
+        self.setWindowTitle("Settings")
+
+        form = QFormLayout(self)
+
+        self.cb_icons = QCheckBox("Use dice icons in animation (visual only)")
+        self.cb_icons.setChecked(self.mw.settings.get("use_dice_icons", True))
+        form.addRow(self.cb_icons)
+
+        row = QHBoxLayout()
+        ok = QPushButton("OK")
+        cancel = QPushButton("Cancel")
+        ok.clicked.connect(self.accept)
+        cancel.clicked.connect(self.reject)
+        row.addStretch(1)
+        row.addWidget(ok)
+        row.addWidget(cancel)
+        form.addRow(row)
+
+        # High-contrast dark theme
+        self.setStyleSheet("""
+            QDialog { background: #0f1020; color: #e8e8ff; }
+            QLabel, QCheckBox { color: #e8e8ff; font-size: 14px; }
+            QCheckBox::indicator { width: 18px; height: 18px; }
+            QPushButton {
+                color: #ffffff;
+                background: #2a2d5c;
+                border-radius: 8px;
+                padding: 8px 14px;
+            }
+            QPushButton:hover { background: #343879; }
+            QPushButton:pressed { background: #222555; }
+            QPushButton:disabled { color: #9aa0c3; background: #1b1d3a; }
+        """)
+
+    def apply(self):
+        self.mw.settings["use_dice_icons"] = self.cb_icons.isChecked()
+        save_settings(self.mw.settings)
+
+# ---------------- Game Screen ----------------
 class GameScreen(QWidget):
     def __init__(self, main_window: "MainWindow"):
         super().__init__(main_window)
@@ -96,7 +143,9 @@ class GameScreen(QWidget):
 
     # HUD refreshers
     def refresh_bar(self):
-        self.bar.setText(f"Gold: {int(self.game.gold)}  |  Diamonds: {self.game.diamonds}  |  Lifetime: {int(self.game.lifetime_gold)}  |  Passive: {self.game.slots_passive_income:.1f}/s")
+        self.bar.setText(
+            f"Gold: {int(self.game.gold)}  |  Diamonds: {self.game.diamonds}  |  Lifetime: {int(self.game.lifetime_gold)}  |  Passive: {self.game.slots_passive_income:.1f}/s"
+        )
 
     def refresh_all(self, msg=None):
         self.refresh_bar()
@@ -114,7 +163,8 @@ class GameScreen(QWidget):
     def on_bet_clicked(self):
         self.bet_btn.setEnabled(False)
         self.message_label.setText("Rolling...")
-        frames = ["1","2","3","4","5","6"]  # consistent; icons optional later
+        use_icons = self.mw.settings.get("use_dice_icons", True)
+        frames = self.mw.DIE_ICONS[:] if use_icons else ["1","2","3","4","5","6"]
         self._roll_frames = frames
         self._roll_index = 0
         self._roll_timer = QTimer(self)
@@ -127,8 +177,9 @@ class GameScreen(QWidget):
         self._roll_index += 1
         if self._roll_index > 6:
             self._roll_timer.stop()
-            faces, total = self.mw.dice_mode.play()
+            faces, total = DiceGame(self.game).play()  # polymorphic
             self.refresh_all(f"{len(faces)}d{self.game.die_sides} → {total}")
+            self.bet_btn.setEnabled(True)
 
     def on_upgrades(self):
         dlg = UpgradesDialog(self.game, self)
@@ -136,14 +187,22 @@ class GameScreen(QWidget):
         self.refresh_all()
         self.mw.save_now()
 
+# ---------------- Main Window ----------------
 class MainWindow(QWidget):
+    DIE_ICONS = ["⚀","⚁","⚂","⚃","⚄","⚅"]
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle(APP_TITLE)
 
+        # Persistent settings
+        self.settings = load_settings()
+
+        # Game state
         self.game = Game()
         self.game.load(SAVE_PATH)
 
+        # Screens
         self.stack = QStackedWidget(self)
         self.menu = MainMenu(
             has_save=Path(SAVE_PATH).exists(),
@@ -155,12 +214,15 @@ class MainWindow(QWidget):
         )
         self.game_screen = GameScreen(self)
 
-        self.stack.addWidget(self.menu)
-        self.stack.addWidget(self.game_screen)
+        self.stack.addWidget(self.menu)        # index 0
+        self.stack.addWidget(self.game_screen) # index 1
 
         root = QVBoxLayout(self)
         root.addWidget(self.stack)
         self.setLayout(root)
+
+        # Global style
+        self.setStyleSheet("QWidget { background: #0f1020; color: #e8e8ff; font-family: Segoe UI, Arial; }")
 
         # Tick & autosave
         self.timer = QTimer(self)
@@ -171,12 +233,7 @@ class MainWindow(QWidget):
         self.resize(860, 560)
         self.show_menu()
 
-    # modes for polymorphism (kept from before)
-    @property
-    def dice_mode(self):  # used by GameScreen
-        from modes import DiceGame
-        return DiceGame(self.game)
-
+    # --- Screen switching ---
     def show_menu(self):
         self.stack.setCurrentIndex(0)
 
@@ -195,26 +252,15 @@ class MainWindow(QWidget):
             self.game.reset()
             self.start_game()
 
+    # --- Settings ---
     def open_settings(self):
-        from PySide6.QtWidgets import QDialog, QFormLayout, QCheckBox, QPushButton, QHBoxLayout
-        dlg = QDialog(self); dlg.setWindowTitle("Settings")
-        form = QFormLayout(dlg)
-        info = QLabel("Settings (more soon)")
-        cb = QCheckBox("Use dice icons in animation (visual only)"); cb.setChecked(False)
-        form.addRow(info); form.addRow(cb)
-        row = QHBoxLayout(); ok = QPushButton("OK"); cancel = QPushButton("Cancel")
-        ok.clicked.connect(dlg.accept); cancel.clicked.connect(dlg.reject)
-        row.addStretch(1); row.addWidget(ok); row.addWidget(cancel); form.addRow(row)
-        dlg.setStyleSheet("""
-            QDialog { background: #0f1020; color: #e8e8ff; }
-            QPushButton { background: #2a2d5c; border-radius: 8px; padding: 6px 12px; }
-            QPushButton:hover { background: #343879; }
-        """)
-        dlg.exec()
+        dlg = SettingsDialog(self)
+        if dlg.exec() == QDialog.Accepted:
+            dlg.apply()  # saves to settings.json
 
+    # --- Tick & Save ---
     def tick(self):
-        # passive income
-        from modes import SlotsGame
+        # passive income from slots
         SlotsGame(self.game).tick_passive()
         if self.stack.currentIndex() == 1:
             self.game_screen.refresh_all()
@@ -227,6 +273,7 @@ class MainWindow(QWidget):
         self.save_now()
         return super().closeEvent(e)
 
+# ---------------- Entrypoint ----------------
 def main():
     app = QApplication(sys.argv)
     w = MainWindow()

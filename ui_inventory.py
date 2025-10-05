@@ -1,7 +1,8 @@
 # ui_inventory.py
 from __future__ import annotations
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton, QHBoxLayout
+from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton
 from dice_models import get_templates
 
 class InventoryTab(QWidget):
@@ -18,6 +19,7 @@ class InventoryTab(QWidget):
 
         self.listw = QListWidget()
         self.listw.setAlternatingRowColors(True)
+        self.listw.setIconSize(QPixmap(64, 64).size())
 
         self.btn_equip = QPushButton("Equip to next empty slot")
         self.btn_equip.clicked.connect(self._equip_selected)
@@ -47,6 +49,13 @@ class InventoryTab(QWidget):
             tag = f"[{t.rarity}] {t.name} (d{t.sides})  |  HP {t.hp}  ATK {t.atk}  DEF {t.defense}  SPD {t.speed}  |  Set: {t.set_name}"
             item = QListWidgetItem(tag)
             item.setData(Qt.UserRole, d.uid)
+
+            icon_path = t.resolve_icon_path()
+            if icon_path:
+                pix = QPixmap(str(icon_path))
+                if not pix.isNull():
+                    item.setIcon(QIcon(pix))
+
             self.listw.addItem(item)
 
     def _equip_selected(self):

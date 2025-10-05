@@ -2,12 +2,12 @@
 import random, json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, List
+from typing import Any, Optional, List, Dict
 
 from upgrades import UpgradeDef, UPGRADES
-from dice_models import DiceInstance, get_templates
+from dice_models import DiceInstance, get_templates, get_sets, DiceTemplate, DiceSet, SetBonusTier
 
-SAVE_VERSION = 7
+SAVE_VERSION = 8
 SAVE_PATH = Path(__file__).with_name("savedata.json")
 
 @dataclass
@@ -65,17 +65,21 @@ class Game:
         # upgrades
         self.upgrades: list[Upgrade] = [Upgrade(defn) for defn in UPGRADES]
 
-        # --- NEW: collection and loadout ---
+        # collection & loadout
         self.inventory: List[DiceInstance] = []
         self._next_uid: int = 1
-        self.loadout: List[int] = [0, 0, 0, 0, 0, 0]  # store dice uids, 0 = empty
+        self.loadout: List[int] = [0, 0, 0, 0, 0, 0]
+
+        # caches for templates/sets
+        self._templates = get_templates()
+        self._sets = get_sets()
 
         self._recompute_stats()
 
     # ---------- Collection ----------
     def _grant_starter_if_empty(self):
         if not self.inventory:
-            self.add_dice("common_d6")  # starter
+            self.add_dice("wooden_d8")
             self.loadout[0] = self.inventory[0].uid
 
     def add_dice(self, template_key: str) -> DiceInstance:
@@ -92,7 +96,6 @@ class Game:
 
     def equip_first_empty(self, uid: int) -> bool:
         if not self.find_dice(uid): return False
-        # already equipped?
         if uid in self.loadout: return True
         for i in range(len(self.loadout)):
             if self.loadout[i] == 0:
@@ -101,11 +104,68 @@ class Game:
         return False
 
     def compact_loadout(self):
-        # keep order but push zeros to end
         filtered = [u for u in self.loadout if u]
         self.loadout = filtered + [0]*(6 - len(filtered))
 
-    # ---------- Gameplay ----------
+    # ---------- Team & Set Bonuses ----------
+    def get_loadout_templates(self) -> List[DiceTemplate]:
+        out: List[DiceTemplate] = []
+        for uid in self.loadout:
+            if not uid:
+                continue
+            inst = self.find_dice(uid)
+            if not inst: 
+                continue
+            t = self._templates.get(inst.template_key)
+            if t: out.append(t)
+        return out
+
+    def compute_set_counts(self) -> Dict[str, int]:
+        counts: Dict[str, int] = {}
+        for t in self.get_loadout_templates():
+            counts[t.set_key] = counts.get(t.set_key, 0) + 1
+        return counts
+
+    def active_set_tiers(self) -> List[SetBonusTier]:
+        tiers: List[SetBonusTier] = []
+        counts = self.compute_set_counts()
+        for set_key, cnt in counts.items():
+            s = self._sets.get(set_key)
+            if not s: continue
+            for tier in s.tiers:
+                if cnt >= tier.pieces:
+                    tiers.append(tier)
+        return tiers
+
+    def team_totals_with_bonuses(self) -> Dict[str, int | float]:
+        # base sums
+        base = {"hp":0, "atk":0, "defense":0, "speed":0}
+        for t in self.get_loadout_templates():
+            base["hp"] += t.hp
+            base["atk"] += t.atk
+            base["defense"] += t.defense
+            base["speed"] += t.speed
+
+        # apply bonuses
+        flat_add = {"hp":0, "atk":0, "defense":0, "speed":0}
+        pct_add = {"hp":0.0, "atk":0.0, "defense":0.0, "speed":0.0}
+        for tier in self.active_set_tiers():
+            for stat, kind, amt in tier.bonuses:
+                if kind == "flat":
+                    flat_add[stat] += amt
+                elif kind == "pct":
+                    pct_add[stat] += amt
+
+        # final
+        final = {}
+        for stat in base.keys():
+            val = base[stat]
+            val += flat_add[stat]
+            val = int(round(val * (1 + pct_add[stat]/100.0)))
+            final[stat] = val
+        return final
+
+    # ---------- Casino Gameplay ----------
     def bet(self) -> tuple[list[int], int]:
         faces = [random.randint(1, self.die_sides) for _ in range(self.dice_count)]
         total = sum(faces)
@@ -120,10 +180,8 @@ class Game:
         gold_won = 0
         diamonds_won = 0
         if len(set(reels)) == 1:
-            if reels[0] == "💎":
-                diamonds_won = 10
-            else:
-                gold_won = 500
+            if reels[0] == "💎": diamonds_won = 10
+            else: gold_won = 500
         elif len(set(reels)) == 2:
             gold_won = 50
         self.gold += gold_won
@@ -206,7 +264,9 @@ class Game:
         # inventory/loadout
         self.inventory.clear()
         for rec in data.get("inv", []):
-            self.inventory.append(DiceInstance(uid=int(rec["uid"]), template_key=rec["template_key"], level=int(rec.get("level",1))))
+            self.inventory.append(DiceInstance(uid=int(rec["uid"]),
+                                               template_key=rec["template_key"],
+                                               level=int(rec.get("level",1))))
         self._next_uid = int(data.get("next_uid", len(self.inventory)+1))
         ld = data.get("loadout", [0,0,0,0,0,0])
         self.loadout = [int(x) for x in (ld + [0,0,0,0,0,0])[:6]]
@@ -223,18 +283,15 @@ class Game:
     def load(self, path: Path = SAVE_PATH) -> bool:
         try:
             if not path.exists():
-                # first-time players get a starter die
                 self._grant_starter_if_empty()
                 return False
             self.from_dict(json.loads(path.read_text()))
-            # if somehow empty, still guarantee starter
             self._grant_starter_if_empty()
             return True
         except Exception:
             self._grant_starter_if_empty()
             return False
 
-    # convenience for menu reset
     def reset(self):
         self.gold = 0.0
         self.lifetime_gold = 0.0

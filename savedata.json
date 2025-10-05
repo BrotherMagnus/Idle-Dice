@@ -1,7 +1,7 @@
 {
-  "version": 6,
-  "gold": 3424.2999999999993,
-  "lifetime_gold": 8553.5,
+  "version": 8,
+  "gold": 4032.7999999999993,
+  "lifetime_gold": 9162.0,
   "diamonds": 0,
   "base_dice": 1,
   "slots_unlocked": true,
@@ -54,5 +54,21 @@
       "key": "slots_passive_2",
       "level": 0
     }
+  ],
+  "inv": [
+    {
+      "uid": 1,
+      "template_key": "wooden_d8",
+      "level": 1
+    }
+  ],
+  "next_uid": 2,
+  "loadout": [
+    1,
+    0,
+    0,
+    0,
+    0,
+    0
   ]
 }
