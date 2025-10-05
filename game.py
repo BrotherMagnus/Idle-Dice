@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Any, Optional, List, Dict
 
 from upgrades import UpgradeDef, UPGRADES
-from dice_models import DiceInstance, get_templates, get_sets, DiceTemplate, DiceSet, SetBonusTier
+from dice_models import DiceInstance, get_templates, get_sets, DiceTemplate, SetBonusTier
 
-SAVE_VERSION = 8
+SAVE_VERSION = 9
 SAVE_PATH = Path(__file__).with_name("savedata.json")
 
 @dataclass
@@ -34,6 +34,12 @@ class Upgrade:
     def die_sides_increase(self): return self.definition.die_sides_increase
     @property
     def slots_passive(self): return self.definition.slots_passive
+    @property
+    def global_gold_mult(self): return self.definition.global_gold_mult
+    @property
+    def roulette_payout_bonus(self): return self.definition.roulette_payout_bonus
+    @property
+    def roulette_maxbet_increase(self): return self.definition.roulette_maxbet_increase
 
     @property
     def reveal_after_key(self): return self.definition.reveal_after_key
@@ -48,29 +54,39 @@ class Upgrade:
 
 class Game:
     def __init__(self):
+        # Currencies
         self.gold: float = 0.0
         self.lifetime_gold: float = 0.0
         self.diamonds: int = 0
 
-        # casino dice mode stats (separate from battler dice)
+        # Dice game stats
         self.base_dice: int = 1
         self.dice_count: int = 1
         self.die_sides: int = 6
         self.animation_speed: float = 1.0
 
-        # slots
+        # Slots
         self.slots_unlocked: bool = False
         self.slots_passive_income: float = 0.0
 
-        # upgrades
+        # Roulette
+        self.roulette_unlocked: bool = False
+        self.roulette_base_max_bet: int = 100
+        self.roulette_max_bet: int = 100
+        self.roulette_payout_bonus_total: float = 0.0  # e.g., 0.04 = +4%
+
+        # Global
+        self.global_income_mult: float = 1.0
+
+        # Upgrades
         self.upgrades: list[Upgrade] = [Upgrade(defn) for defn in UPGRADES]
 
-        # collection & loadout
+        # Collection & loadout
         self.inventory: List[DiceInstance] = []
         self._next_uid: int = 1
         self.loadout: List[int] = [0, 0, 0, 0, 0, 0]
 
-        # caches for templates/sets
+        # caches
         self._templates = get_templates()
         self._sets = get_sets()
 
@@ -90,8 +106,7 @@ class Game:
 
     def find_dice(self, uid: int) -> Optional[DiceInstance]:
         for d in self.inventory:
-            if d.uid == uid:
-                return d
+            if d.uid == uid: return d
         return None
 
     def equip_first_empty(self, uid: int) -> bool:
@@ -111,11 +126,9 @@ class Game:
     def get_loadout_templates(self) -> List[DiceTemplate]:
         out: List[DiceTemplate] = []
         for uid in self.loadout:
-            if not uid:
-                continue
+            if not uid: continue
             inst = self.find_dice(uid)
-            if not inst: 
-                continue
+            if not inst: continue
             t = self._templates.get(inst.template_key)
             if t: out.append(t)
         return out
@@ -133,59 +146,53 @@ class Game:
             s = self._sets.get(set_key)
             if not s: continue
             for tier in s.tiers:
-                if cnt >= tier.pieces:
-                    tiers.append(tier)
+                if cnt >= tier.pieces: tiers.append(tier)
         return tiers
 
     def team_totals_with_bonuses(self) -> Dict[str, int | float]:
-        # base sums
         base = {"hp":0, "atk":0, "defense":0, "speed":0}
         for t in self.get_loadout_templates():
-            base["hp"] += t.hp
-            base["atk"] += t.atk
-            base["defense"] += t.defense
-            base["speed"] += t.speed
+            base["hp"] += t.hp; base["atk"] += t.atk
+            base["defense"] += t.defense; base["speed"] += t.speed
 
-        # apply bonuses
         flat_add = {"hp":0, "atk":0, "defense":0, "speed":0}
         pct_add = {"hp":0.0, "atk":0.0, "defense":0.0, "speed":0.0}
         for tier in self.active_set_tiers():
             for stat, kind, amt in tier.bonuses:
-                if kind == "flat":
-                    flat_add[stat] += amt
-                elif kind == "pct":
-                    pct_add[stat] += amt
+                if kind == "flat": flat_add[stat] += amt
+                else: pct_add[stat] += amt
 
-        # final
         final = {}
         for stat in base.keys():
-            val = base[stat]
-            val += flat_add[stat]
+            val = base[stat] + flat_add[stat]
             val = int(round(val * (1 + pct_add[stat]/100.0)))
             final[stat] = val
         return final
 
     # ---------- Casino Gameplay ----------
+    def _apply_income(self, gold: int):
+        gold2 = int(round(gold * self.global_income_mult))
+        self.gold += gold2
+        self.lifetime_gold += gold2
+        self._check_unlocks()
+        return gold2
+
     def bet(self) -> tuple[list[int], int]:
         faces = [random.randint(1, self.die_sides) for _ in range(self.dice_count)]
         total = sum(faces)
-        self.gold += total
-        self.lifetime_gold += total
-        self._check_unlocks()
-        return faces, total
+        gained = self._apply_income(total)
+        return faces, gained
 
     def spin_slots(self) -> tuple[list[str], int, int]:
         symbols = ["🍒", "🍋", "7️⃣", "💎", "⭐"]
         reels = [random.choice(symbols) for _ in range(3)]
-        gold_won = 0
-        diamonds_won = 0
+        gold_won = 0; diamonds_won = 0
         if len(set(reels)) == 1:
             if reels[0] == "💎": diamonds_won = 10
             else: gold_won = 500
         elif len(set(reels)) == 2:
             gold_won = 50
-        self.gold += gold_won
-        self.lifetime_gold += gold_won
+        gold_won = self._apply_income(gold_won)
         self.diamonds += diamonds_won
         return reels, gold_won, diamonds_won
 
@@ -204,13 +211,27 @@ class Game:
 
     def _recompute_stats(self):
         self._apply_reveal_and_disable()
+
+        # Dice
         self.dice_count = self.base_dice + sum(u.level * u.dice_gain for u in self.upgrades)
         self.die_sides = 6 + sum(u.level * u.die_sides_increase for u in self.upgrades)
         self.animation_speed = 1.0
         for u in self.upgrades:
             if u.level > 0 and u.animation_speed_mult != 1.0:
                 self.animation_speed *= (u.animation_speed_mult ** u.level)
+
+        # Slots
         self.slots_passive_income = sum(u.level * u.slots_passive for u in self.upgrades)
+
+        # Global
+        self.global_income_mult = 1.0
+        for u in self.upgrades:
+            if u.level > 0 and u.global_gold_mult != 1.0:
+                self.global_income_mult *= (u.global_gold_mult ** u.level)
+
+        # Roulette
+        self.roulette_max_bet = self.roulette_base_max_bet + sum(u.level * u.roulette_maxbet_increase for u in self.upgrades)
+        self.roulette_payout_bonus_total = sum(u.level * u.roulette_payout_bonus for u in self.upgrades)
 
     def visible_upgrades(self, category: str):
         return [u for u in self.upgrades if u.category == category and not u.locked]
@@ -229,21 +250,21 @@ class Game:
     def _check_unlocks(self):
         if not self.slots_unlocked and self.lifetime_gold >= 2000:
             self.slots_unlocked = True
+        if not self.roulette_unlocked and self.lifetime_gold >= 10000:
+            self.roulette_unlocked = True
 
     def tick_passive(self):
         if self.slots_unlocked and self.slots_passive_income > 0:
-            self.gold += self.slots_passive_income
-            self.lifetime_gold += self.slots_passive_income
+            self._apply_income(int(self.slots_passive_income))
 
     # ---------- Persistence ----------
     def to_dict(self) -> dict[str, Any]:
         return {
             "version": SAVE_VERSION,
-            "gold": self.gold,
-            "lifetime_gold": self.lifetime_gold,
-            "diamonds": self.diamonds,
+            "gold": self.gold, "lifetime_gold": self.lifetime_gold, "diamonds": self.diamonds,
             "base_dice": self.base_dice,
             "slots_unlocked": self.slots_unlocked,
+            "roulette_unlocked": self.roulette_unlocked,
             "upgrades": [{"key": u.key, "level": u.level} for u in self.upgrades],
             "inv": [{"uid": d.uid, "template_key": d.template_key, "level": d.level} for d in self.inventory],
             "next_uid": self._next_uid,
@@ -256,12 +277,12 @@ class Game:
         self.diamonds = int(data.get("diamonds", 0))
         self.base_dice = int(data.get("base_dice", 1))
         self.slots_unlocked = bool(data.get("slots_unlocked", False))
-        saved_levels = {rec.get("key"): int(rec.get("level", 0)) for rec in data.get("upgrades", [])}
-        for u in self.upgrades:
-            if u.key in saved_levels:
-                u.level = saved_levels[u.key]
+        self.roulette_unlocked = bool(data.get("roulette_unlocked", False))
 
-        # inventory/loadout
+        saved_lvls = {rec.get("key"): int(rec.get("level", 0)) for rec in data.get("upgrades", [])}
+        for u in self.upgrades:
+            if u.key in saved_lvls: u.level = saved_lvls[u.key]
+
         self.inventory.clear()
         for rec in data.get("inv", []):
             self.inventory.append(DiceInstance(uid=int(rec["uid"]),
@@ -275,37 +296,23 @@ class Game:
 
     def save(self, path: Path = SAVE_PATH) -> bool:
         try:
-            path.write_text(json.dumps(self.to_dict(), indent=2))
-            return True
-        except Exception:
-            return False
+            path.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8"); return True
+        except Exception: return False
 
     def load(self, path: Path = SAVE_PATH) -> bool:
         try:
             if not path.exists():
-                self._grant_starter_if_empty()
-                return False
-            self.from_dict(json.loads(path.read_text()))
-            self._grant_starter_if_empty()
-            return True
+                self._grant_starter_if_empty(); return False
+            self.from_dict(json.loads(path.read_text(encoding="utf-8")))
+            self._grant_starter_if_empty(); return True
         except Exception:
-            self._grant_starter_if_empty()
-            return False
+            self._grant_starter_if_empty(); return False
 
     def reset(self):
-        self.gold = 0.0
-        self.lifetime_gold = 0.0
-        self.diamonds = 0
-        self.base_dice = 1
-        self.dice_count = 1
-        self.die_sides = 6
-        self.animation_speed = 1.0
-        self.slots_unlocked = False
-        self.slots_passive_income = 0.0
-        for u in self.upgrades:
-            u.level = 0; u.locked = False; u.disabled = False
-        self.inventory.clear()
-        self._next_uid = 1
-        self.loadout = [0,0,0,0,0,0]
-        self._grant_starter_if_empty()
-        self._recompute_stats()
+        self.gold = 0.0; self.lifetime_gold = 0.0; self.diamonds = 0
+        self.base_dice = 1; self.dice_count = 1; self.die_sides = 6; self.animation_speed = 1.0
+        self.slots_unlocked = False; self.slots_passive_income = 0.0
+        self.roulette_unlocked = False; self.roulette_max_bet = self.roulette_base_max_bet
+        for u in self.upgrades: u.level = 0; u.locked = False; u.disabled = False
+        self.inventory.clear(); self._next_uid = 1; self.loadout = [0]*6
+        self._grant_starter_if_empty(); self._recompute_stats()

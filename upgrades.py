@@ -1,46 +1,93 @@
 # upgrades.py
+from __future__ import annotations
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 @dataclass(frozen=True)
 class UpgradeDef:
     key: str
-    category: str              # "dice" or "casino"
+    category: str              # "global" | "dice" | "slots" | "roulette"
     name: str
     base_cost: int
     cost_multiplier: float = 1.15
-    max_level: int = 9999
+    max_level: int = 999
 
-    # Effects
-    dice_gain: int = 0
-    animation_speed_mult: float = 1.0
-    die_sides_increase: int = 0
-    slots_passive: float = 0.0   # gold/sec per level
-
-    # Visibility / flow
+    # Reveal/Disable logic
     reveal_after_key: Optional[str] = None
     reveal_after_level: int = 0
     disabled_when_reached_level: Optional[int] = None
 
+    # Effects (all optional; Game interprets them)
+    # Dice
+    dice_gain: int = 0
+    animation_speed_mult: float = 1.0
+    die_sides_increase: int = 0
+    # Slots
+    slots_passive: float = 0.0
+    # Global (affects every gold earning)
+    global_gold_mult: float = 1.0    # e.g., 1.02 means +2%/lvl (Game multiplies)
+    # Roulette
+    roulette_payout_bonus: float = 0.0  # +% to payouts, e.g. 0.02/lvl
+    roulette_maxbet_increase: int = 0   # +flat max bet
 
-UPGRADES: list[UpgradeDef] = [
-    # Dice Quantity chain (I–V)
-    UpgradeDef("dice_qty_1", "dice", "Dice Quantity I", 20, dice_gain=1, disabled_when_reached_level=50),
-    UpgradeDef("dice_qty_2", "dice", "Dice Quantity II", 5000, dice_gain=2, reveal_after_key="dice_qty_1", reveal_after_level=50, disabled_when_reached_level=50),
-    UpgradeDef("dice_qty_3", "dice", "Dice Quantity III", 50_000, dice_gain=3, reveal_after_key="dice_qty_2", reveal_after_level=50, disabled_when_reached_level=50),
-    UpgradeDef("dice_qty_4", "dice", "Dice Quantity IV", 250_000, dice_gain=4, reveal_after_key="dice_qty_3", reveal_after_level=50, disabled_when_reached_level=50),
-    UpgradeDef("dice_qty_5", "dice", "Dice Quantity V", 1_000_000, dice_gain=5, reveal_after_key="dice_qty_4", reveal_after_level=50),
+# --- Upgrade Catalog ---
+UPGRADES: List[UpgradeDef] = [
+    # ---------- GLOBAL ----------
+    UpgradeDef(
+        key="global_income_1", category="global", name="Casino Reputation I",
+        base_cost=800, global_gold_mult=1.02, max_level=50
+    ),
+    UpgradeDef(
+        key="global_income_2", category="global", name="High Roller Lounge",
+        base_cost=8500, cost_multiplier=1.18, global_gold_mult=1.03, max_level=40,
+        reveal_after_key="global_income_1", reveal_after_level=10
+    ),
 
-    # Faster Roller chain
-    UpgradeDef("faster_roller_1", "dice", "Faster Roller I", 100, animation_speed_mult=0.9),
-    UpgradeDef("faster_roller_2", "dice", "Faster Roller II", 10_000, animation_speed_mult=0.9, reveal_after_key="faster_roller_1", reveal_after_level=25),
-    UpgradeDef("faster_roller_3", "dice", "Faster Roller III", 100_000, animation_speed_mult=0.9, reveal_after_key="faster_roller_2", reveal_after_level=25),
+    # ---------- DICE ----------
+    UpgradeDef(
+        key="dice_qty_1", category="dice", name="Dice Quantity I",
+        base_cost=20, dice_gain=1, disabled_when_reached_level=50,
+    ),
+    UpgradeDef(
+        key="dice_qty_2", category="dice", name="Dice Quantity II",
+        base_cost=5000, dice_gain=2, reveal_after_key="dice_qty_1", reveal_after_level=50,
+    ),
+    UpgradeDef(
+        key="dice_qty_3", category="dice", name="Dice Quantity III",
+        base_cost=120000, dice_gain=3, reveal_after_key="dice_qty_2", reveal_after_level=50,
+    ),
+    UpgradeDef(
+        key="faster_roller_1", category="dice", name="Faster Roller I",
+        base_cost=100, animation_speed_mult=0.9, max_level=10,
+    ),
+    UpgradeDef(
+        key="faster_roller_2", category="dice", name="Faster Roller II",
+        base_cost=5000, animation_speed_mult=0.9, max_level=10,
+        reveal_after_key="faster_roller_1", reveal_after_level=10,
+    ),
+    UpgradeDef(
+        key="more_sides_1", category="dice", name="Sharper Edges",
+        base_cost=2000, die_sides_increase=1, max_level=6
+    ),
 
-    # More sides
-    UpgradeDef("die_sides_1", "dice", "Die Sides I (d8)", 200_000, max_level=1, die_sides_increase=2),
-    UpgradeDef("die_sides_2", "dice", "Die Sides II (d10)", 1_000_000, max_level=1, die_sides_increase=4, reveal_after_key="die_sides_1", reveal_after_level=1),
+    # ---------- SLOTS ----------
+    UpgradeDef(
+        key="slots_passive_1", category="slots", name="VIP Slot Floor",
+        base_cost=1000, slots_passive=1.0
+    ),
+    UpgradeDef(
+        key="slots_passive_2", category="slots", name="Loose Machines",
+        base_cost=6000, cost_multiplier=1.2, slots_passive=3.0,
+        reveal_after_key="slots_passive_1", reveal_after_level=5
+    ),
 
-    # Casino: Slots passive income upgrades
-    UpgradeDef("slots_passive_1", "casino", "Slots Passive I", 2500, slots_passive=0.5),
-    UpgradeDef("slots_passive_2", "casino", "Slots Passive II", 25_000, slots_passive=2.0, reveal_after_key="slots_passive_1", reveal_after_level=25),
+    # ---------- ROULETTE ----------
+    UpgradeDef(
+        key="roulette_maxbet_1", category="roulette", name="Bigger Table Limits",
+        base_cost=2000, roulette_maxbet_increase=250
+    ),
+    UpgradeDef(
+        key="roulette_payout_bonus_1", category="roulette", name="Croupier Favor",
+        base_cost=3500, roulette_payout_bonus=0.02, max_level=20  # +2% payout per level
+    ),
 ]
