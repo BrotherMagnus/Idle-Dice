@@ -1,7 +1,7 @@
 {
   "version": 8,
-  "gold": 4032.7999999999993,
-  "lifetime_gold": 9162.0,
+  "gold": 4448.299999999999,
+  "lifetime_gold": 9577.5,
   "diamonds": 0,
   "base_dice": 1,
   "slots_unlocked": true,
@@ -64,7 +64,7 @@
   ],
   "next_uid": 2,
   "loadout": [
-    1,
+    0,
     0,
     0,
     0,
