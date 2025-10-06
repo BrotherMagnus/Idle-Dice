@@ -6,7 +6,7 @@ from typing import Optional, List
 @dataclass(frozen=True)
 class UpgradeDef:
     key: str
-    category: str              # "global" | "dice" | "slots" | "roulette"
+    category: str              # "global" | "dice" | "slots" | "roulette" | "buildings"
     name: str
     base_cost: int
     cost_multiplier: float = 1.15
@@ -17,18 +17,26 @@ class UpgradeDef:
     reveal_after_level: int = 0
     disabled_when_reached_level: Optional[int] = None
 
-    # Effects (all optional; Game interprets them)
+    # Effects (interpreted by Game)
     # Dice
     dice_gain: int = 0
     animation_speed_mult: float = 1.0
     die_sides_increase: int = 0
+
     # Slots
     slots_passive: float = 0.0
-    # Global (affects every gold earning)
-    global_gold_mult: float = 1.0    # e.g., 1.02 means +2%/lvl (Game multiplies)
+
     # Roulette
-    roulette_payout_bonus: float = 0.0  # +% to payouts, e.g. 0.02/lvl
-    roulette_maxbet_increase: int = 0   # +flat max bet
+    roulette_payout_bonus: float = 0.0   # +% payouts per level (0.02 = +2%)
+    roulette_maxbet_increase: int = 0
+    roulette_passive: float = 0.0        # gold/sec
+
+    # Buildings (generic passive gold/sec)
+    building_gold_ps: float = 0.0
+
+    # Global
+    global_gold_mult: float = 1.0        # multiplicative
+    shards_passive: float = 0.0          # shards/sec (new currency)
 
 # --- Upgrade Catalog ---
 UPGRADES: List[UpgradeDef] = [
@@ -41,6 +49,15 @@ UPGRADES: List[UpgradeDef] = [
         key="global_income_2", category="global", name="High Roller Lounge",
         base_cost=8500, cost_multiplier=1.18, global_gold_mult=1.03, max_level=40,
         reveal_after_key="global_income_1", reveal_after_level=10
+    ),
+    UpgradeDef(
+        key="shard_drip_1", category="global", name="Shard Drip",
+        base_cost=3000, shards_passive=0.2, max_level=50
+    ),
+    UpgradeDef(
+        key="global_income_3", category="global", name="Prime Time Promotions",
+        base_cost=50000, cost_multiplier=1.2, global_gold_mult=1.05, max_level=30,
+        reveal_after_key="global_income_2", reveal_after_level=15
     ),
 
     # ---------- DICE ----------
@@ -88,6 +105,33 @@ UPGRADES: List[UpgradeDef] = [
     ),
     UpgradeDef(
         key="roulette_payout_bonus_1", category="roulette", name="Croupier Favor",
-        base_cost=3500, roulette_payout_bonus=0.02, max_level=20  # +2% payout per level
+        base_cost=3500, roulette_payout_bonus=0.02, max_level=20
+    ),
+    UpgradeDef(
+        key="roulette_passive_1", category="roulette", name="Night Wheel",
+        base_cost=4000, roulette_passive=1.5
+    ),
+    UpgradeDef(
+        key="roulette_passive_2", category="roulette", name="VIP Wheel",
+        base_cost=20000, cost_multiplier=1.2, roulette_passive=5.0,
+        reveal_after_key="roulette_passive_1", reveal_after_level=5
+    ),
+
+    # ---------- BUILDINGS (Cookie-Clicker style) ----------
+    UpgradeDef(
+        key="b_kiosk", category="buildings", name="Cashier Kiosk",
+        base_cost=500, building_gold_ps=0.5
+    ),
+    UpgradeDef(
+        key="b_bar", category="buildings", name="Casino Bar",
+        base_cost=2500, building_gold_ps=2.0, reveal_after_key="b_kiosk", reveal_after_level=5
+    ),
+    UpgradeDef(
+        key="b_pitboss", category="buildings", name="Pit Boss",
+        base_cost=10000, building_gold_ps=6.0, reveal_after_key="b_bar", reveal_after_level=5
+    ),
+    UpgradeDef(
+        key="b_vip", category="buildings", name="VIP Lounge",
+        base_cost=60000, building_gold_ps=20.0, reveal_after_key="b_pitboss", reveal_after_level=5
     ),
 ]

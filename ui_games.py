@@ -26,14 +26,14 @@ class GamesScreen(QWidget):
         )
         self.card_grid.addWidget(self.dice_card, 0, 0)
 
-        # Slots (visible once unlocked)
+        # Slots (visible once unlocked; card always shown but Play disabled until unlocked)
         self.slots_card = self._make_card(
             "Slots", "Spin 3 reels. Jackpots give Diamonds.",
             [("Play", self._open_slots), ("Upgrades", lambda: self._open_upgrades("slots"))]
         )
         self.card_grid.addWidget(self.slots_card, 0, 1)
 
-        # Roulette (added/removed dynamically below)
+        # Roulette (added dynamically on unlock)
         self.roulette_card = None  # type: QFrame | None
 
         unlocks_title = QLabel("Game Unlocks")
@@ -86,10 +86,10 @@ class GamesScreen(QWidget):
         return box
 
     def refresh(self):
-        # Ensure unlock flags reflect current lifetime totals
+        # ensure unlock flags reflect current totals
         self.game.check_unlocks()
 
-        # Update unlock text
+        # unlock text
         need_slots = 2000;  have_slots = int(self.game.lifetime_gold)
         need_roul  = 10000; have_roul  = int(self.game.lifetime_gold)
         status = [
@@ -98,18 +98,16 @@ class GamesScreen(QWidget):
         ]
         self.unlocks_lbl.setText("\n".join(status))
 
-        # Show/hide Slots "Play" based on unlock
+        # Slots play enable/disable
         for b in self.slots_card.findChildren(QPushButton):
-            if b.text() == "Play":
-                b.setEnabled(self.game.slots_unlocked)
+            if b.text() == "Play": b.setEnabled(self.game.slots_unlocked)
 
-        # Add or remove Roulette card dynamically
+        # Roulette card appears only when unlocked
         if self.game.roulette_unlocked and self.roulette_card is None:
             self.roulette_card = self._make_card(
                 "Roulette", "Bet on red/black or a number.",
                 [("Play", self._open_roulette), ("Upgrades", lambda: self._open_upgrades("roulette"))]
             )
-            # place it on next row, first column
             self.card_grid.addWidget(self.roulette_card, 1, 0)
 
         if not self.game.roulette_unlocked and self.roulette_card is not None:
@@ -117,11 +115,9 @@ class GamesScreen(QWidget):
             self.roulette_card.deleteLater()
             self.roulette_card = None
 
-        # If present, ensure Roulette Play button is enabled (it will be, since unlocked)
         if self.roulette_card:
             for b in self.roulette_card.findChildren(QPushButton):
-                if b.text() == "Play":
-                    b.setEnabled(True)
+                if b.text() == "Play": b.setEnabled(True)
 
     # actions
     def _open_dice(self): self.mw.show_game(direct_tab="Dice")
