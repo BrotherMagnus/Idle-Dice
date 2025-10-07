@@ -92,6 +92,13 @@ class Game:
         self.global_income_mult: float = 1.0
         self.shards_passive_income: float = 0.0
 
+        # --- NEW: loadout-driven economy fields ---
+        self.dice_idle_income: float = 0.0                # flat gold/sec from dice
+        self.slots_yield_mult: float = 1.0               # multiplies slots gold payouts
+        self.shards_rate_mult: float = 1.0               # multiplies shard passive
+        self.team_gold_mult_from_dice: float = 1.0       # multiplies global_income_mult (stacked)
+        self.team_roulette_bonus_from_dice: float = 0.0  # adds to roulette_payout_bonus_total
+
         # upgrades
         self.upgrades: list[Upgrade] = [Upgrade(defn) for defn in UPGRADES]
 
@@ -111,6 +118,7 @@ class Game:
         if not self.inventory:
             self.add_dice("wooden_d8")
             self.loadout[0] = self.inventory[0].uid
+            self.on_loadout_changed()
 
     def add_dice(self, template_key: str) -> DiceInstance:
         inst = DiceInstance(uid=self._next_uid, template_key=template_key)
@@ -129,12 +137,17 @@ class Game:
         for i in range(len(self.loadout)):
             if self.loadout[i] == 0:
                 self.loadout[i] = uid
+                self.on_loadout_changed()  # ensure stats refresh
                 return True
         return False
 
     def compact_loadout(self):
         filtered = [u for u in self.loadout if u]
         self.loadout = filtered + [0]*(6 - len(filtered))
+
+    # Public hook for UI to call after any loadout edits
+    def on_loadout_changed(self):
+        self._recompute_stats()
 
     # ---------- team & set bonuses ----------
     def get_loadout_templates(self) -> List[DiceTemplate]:
@@ -206,6 +219,11 @@ class Game:
             else: gold_won = 500
         elif len(set(reels)) == 2:
             gold_won = 50
+
+        # --- NEW: apply slots yield multiplier from loadout dice
+        if gold_won > 0:
+            gold_won = int(round(gold_won * self.slots_yield_mult))
+
         gold_won = self._apply_income(gold_won)
         self.diamonds += diamonds_won
         return reels, gold_won, diamonds_won
@@ -245,7 +263,7 @@ class Game:
         # buildings
         self.buildings_passive_income = sum(u.level * u.building_gold_ps for u in self.upgrades)
 
-        # global
+        # global & shards (from upgrades)
         self.global_income_mult = 1.0
         self.shards_passive_income = 0.0
         for u in self.upgrades:
@@ -253,6 +271,26 @@ class Game:
                 self.global_income_mult *= (u.global_gold_mult ** u.level)
             if u.level > 0 and u.shards_passive > 0.0:
                 self.shards_passive_income += u.level * u.shards_passive
+
+        # --- NEW: apply economy effects from equipped dice ---
+        self.team_gold_mult_from_dice = 1.0
+        self.dice_idle_income = 0.0
+        self.slots_yield_mult = 1.0
+        self.team_roulette_bonus_from_dice = 0.0
+        self.shards_rate_mult = 1.0
+
+        for t in self.get_loadout_templates():
+            # percent fields are *pct*, so divide by 100
+            self.team_gold_mult_from_dice *= (1.0 + (t.gold_mult_pct or 0.0) / 100.0)
+            self.dice_idle_income += (t.idle_gold_ps or 0.0)
+            self.slots_yield_mult *= (1.0 + (t.slots_mult_pct or 0.0) / 100.0)
+            self.team_roulette_bonus_from_dice += (t.roulette_mult_pct or 0.0) / 100.0
+            self.shards_rate_mult *= (1.0 + (t.shard_rate_mult_pct or 0.0) / 100.0)
+
+        # Stack loadout multipliers with upgrade-based multipliers
+        self.global_income_mult *= self.team_gold_mult_from_dice
+        self.roulette_payout_bonus_total += self.team_roulette_bonus_from_dice
+        # note: dice_idle_income and shards_rate_mult are used in tick_passive()
 
     def visible_upgrades(self, category: str):
         return [u for u in self.upgrades if u.category == category and not u.locked]
@@ -282,10 +320,11 @@ class Game:
         gold_ps += self.slots_passive_income
         gold_ps += self.roulette_passive_income
         gold_ps += self.buildings_passive_income
+        gold_ps += self.dice_idle_income  # --- NEW: passive gold from dice
         if gold_ps > 0:
             self._apply_income(int(gold_ps))
         if self.shards_passive_income > 0:
-            self.shards += self.shards_passive_income
+            self.shards += self.shards_passive_income * self.shards_rate_mult  # --- NEW: boosted by dice
 
     # ---------- persistence ----------
     def to_dict(self) -> dict[str, Any]:
@@ -349,6 +388,9 @@ class Game:
         self.roulette_payout_bonus_total = 0.0; self.roulette_passive_income = 0.0
         self.buildings_passive_income = 0.0
         self.global_income_mult = 1.0; self.shards_passive_income = 0.0
+        self.dice_idle_income = 0.0; self.slots_yield_mult = 1.0
+        self.shards_rate_mult = 1.0; self.team_gold_mult_from_dice = 1.0
+        self.team_roulette_bonus_from_dice = 0.0
         for u in self.upgrades: u.level = 0; u.locked = False; u.disabled = False
         self.inventory.clear(); self._next_uid = 1; self.loadout = [0]*6
         self._grant_starter_if_empty(); self._recompute_stats()
