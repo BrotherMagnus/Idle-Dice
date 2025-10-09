@@ -136,7 +136,7 @@ UPGRADES: List[UpgradeDef] = [
     UpgradeDef(
         key="b_hotel", category="buildings", name="Casino Hotel",
         base_cost=300000, building_gold_ps=70.0, reveal_after_key="b_vip", reveal_after_level=5
-     ), ,
+     ), 
     UpgradeDef(
     key="arcane_collector", name="Arcane Collector", category="buildings", 
     base_cost=120000, cost_multiplier=1.25, max_level=50, shards_passive=1.00,           
