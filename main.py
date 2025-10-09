@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from game import Game, SAVE_PATH
+from ui_currencybar import CurrencyBar
 from ui_mainmenu import MainMenu
 from ui_hub import HubMenu
 from ui_games import GamesScreen
@@ -182,17 +183,13 @@ class MainWindow(QWidget):
         self.stack.addWidget(self.inventory_screen)# index 4
 
         # GLOBAL currency bar at the top (always visible)
-        self.currency_bar = QLabel("")
-        self.currency_bar.setAlignment(Qt.AlignCenter)
-        self.currency_bar.setStyleSheet(
-            "font-size:14px; padding:6px; background:#141531; "
-            "border:1px solid #2a2d5c; border-radius:8px;"
-        )
+        self.currency_bar = CurrencyBar(self.game)
 
         root = QVBoxLayout(self)
         root.addWidget(self.currency_bar)
         root.addWidget(self.stack)
         self.setLayout(root)
+
 
         self.setStyleSheet("QWidget { background:#0f1020; color:#e8e8ff; font-family: Segoe UI, Arial; }")
 
@@ -265,12 +262,9 @@ class MainWindow(QWidget):
 
     # -------- Top bar refresh --------
     def _refresh_bar(self):
-        passive_total = self.game.slots_passive_income + self.game.roulette_passive_income + self.game.buildings_passive_income
-        self.currency_bar.setText(
-            f"Gold: {int(self.game.gold)}  |  Diamonds: {self.game.diamonds}  |  "
-            f"Shards: {int(self.game.shards)}  |  Lifetime: {int(self.game.lifetime_gold)}  |  "
-            f"Passive: {passive_total:.1f}/s"
-        )
+        if hasattr(self, "currency_bar") and hasattr(self.currency_bar, "refresh"):
+            self.currency_bar.refresh()
+
 
     # -------- Tick & save --------
     def tick(self):
