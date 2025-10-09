@@ -36,7 +36,10 @@ class UpgradeDef:
 
     # Global
     global_gold_mult: float = 1.0        # multiplicative
-    shards_passive: float = 0.0          # shards/sec (new currency)
+    shards_passive: float = 0.0          # shards/sec
+
+    description: str = "" #flavor text for UI; safe to ignore elsewhere
+
 
 # --- Upgrade Catalog ---
 UPGRADES: List[UpgradeDef] = [
@@ -46,16 +49,12 @@ UPGRADES: List[UpgradeDef] = [
         base_cost=800, global_gold_mult=1.02, max_level=50
     ),
     UpgradeDef(
-        key="global_income_2", category="global", name="High Roller Lounge",
+        key="global_income_2", category="global", name="Casino Reputation II",
         base_cost=8500, cost_multiplier=1.18, global_gold_mult=1.03, max_level=40,
         reveal_after_key="global_income_1", reveal_after_level=10
     ),
     UpgradeDef(
-        key="shard_drip_1", category="global", name="Shard Drip",
-        base_cost=3000, shards_passive=0.2, max_level=50
-    ),
-    UpgradeDef(
-        key="global_income_3", category="global", name="Prime Time Promotions",
+        key="global_income_3", category="global", name="Casino Reputation III",
         base_cost=50000, cost_multiplier=1.2, global_gold_mult=1.05, max_level=30,
         reveal_after_key="global_income_2", reveal_after_level=15
     ),
@@ -134,4 +133,24 @@ UPGRADES: List[UpgradeDef] = [
         key="b_vip", category="buildings", name="VIP Lounge",
         base_cost=60000, building_gold_ps=20.0, reveal_after_key="b_pitboss", reveal_after_level=5
     ),
+    UpgradeDef(
+        key="b_hotel", category="buildings", name="Casino Hotel",
+        base_cost=300000, building_gold_ps=70.0, reveal_after_key="b_vip", reveal_after_level=5
+     ), ,
+    UpgradeDef(
+    key="arcane_collector", name="Arcane Collector", category="buildings", 
+    base_cost=120000, cost_multiplier=1.25, max_level=50, shards_passive=1.00,           
+    description="Installs mystical, collectors in your casino’s walls to harvest magical dice shards over time."
+),
+    UpgradeDef(
+    key="enchanted_fountain", name="Enchanted Fountain", category="buildings", 
+    base_cost=500000, cost_multiplier=1.3, max_level=30, shards_passive=5.00,           
+    description="A beautiful fountain that not only attracts high-rollers but also generates magical dice shards."
+),
+    UpgradeDef(
+    key="mythic_statue", name="Mythic Statue", category="buildings", 
+    base_cost=2000000, cost_multiplier=1.35, max_level=20, shards_passive=20.00,           
+    description="A grand statue that inspires awe and luck, while passively collecting a significant amount of magical dice shards."
+),
+
 ]
