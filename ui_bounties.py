@@ -10,6 +10,11 @@ class BountiesDialog(QtWidgets.QDialog):
         self.resize(520, 420)
 
         v = QtWidgets.QVBoxLayout(self)
+        # Reset timers header
+        self.reset_lbl = QtWidgets.QLabel("")
+        self.reset_lbl.setAlignment(QtCore.Qt.AlignCenter)
+        v.addWidget(self.reset_lbl)
+
         self.list = QtWidgets.QListWidget()
         self.list.setUniformItemSizes(True)
         v.addWidget(self.list)
@@ -32,6 +37,16 @@ class BountiesDialog(QtWidgets.QDialog):
 
     def refresh(self):
         self.list.clear()
+        # Timers
+        try:
+            info = self.game.bounties_reset_info()
+            def fmt(sec: int) -> str:
+                s = int(max(0, sec)); d, s = divmod(s, 86400); h, s = divmod(s, 3600); m, s = divmod(s, 60)
+                return (f"{d}d {h:02d}:{m:02d}:{s:02d}" if d>0 else f"{h:02d}:{m:02d}:{s:02d}")
+            self.reset_lbl.setText(f"Resets — Daily: {fmt(info.get('daily_seconds',0))}  |  Weekly: {fmt(info.get('weekly_seconds',0))}")
+        except Exception:
+            self.reset_lbl.setText("")
+
         for b in self.game.list_bounties():
             text = f"{b['name']}  |  {int(min(b['current'], b['target']))}/{int(b['target'])}  |  Reward: {int(b['reward']):,} shards"
             item = QtWidgets.QListWidgetItem(text)
@@ -57,4 +72,3 @@ class BountiesDialog(QtWidgets.QDialog):
                 self.refresh()
         else:
             QtWidgets.QToolTip.showText(self.mapToGlobal(self.rect().center()), "Not ready yet")
-
