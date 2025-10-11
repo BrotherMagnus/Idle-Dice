@@ -10,15 +10,20 @@ from PySide6.QtWidgets import (
 )
 
 from game import Game, SAVE_PATH
-from ui_currencybar import CurrencyBar
-from ui_mainmenu import MainMenu
-from ui_hub import HubMenu
-from ui_games import GamesScreen
-from ui_inventory_screen import InventoryScreen
-from ui_slots import SlotsTab
-from ui_roulette import RouletteTab
-from ui_upgrades import UpgradesDialog
-from modes import DiceGame, SlotsGame  # SlotsGame still used by ui_slots; passives handled in Game.tick_passive()
+from ui.ui_currencybar import CurrencyBar
+from ui.ui_mainmenu import MainMenu
+from ui.ui_hub import HubMenu
+from ui.ui_games import GamesScreen
+from ui.ui_inventory_screen import InventoryScreen
+from ui.ui_slots import SlotsTab
+from ui.ui_scrap import ScrapTab
+from ui.ui_roulette import RouletteTab
+from ui.ui_upgrades import UpgradesDialog
+from ui.ui_bounties import BountiesDialog
+from ui.ui_buildings_hub import BuildingsHub
+from ui.ui_achievements import AchievementsDialog
+from ui.ui_shop import ShopDialog
+from ops.modes import DiceGame, SlotsGame  # SlotsGame still used by ui_slots; passives handled in Game.tick_passive()
 from settings import load_settings, save_settings
 
 QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
@@ -70,14 +75,18 @@ class GameScreen(QWidget):
         # Dice tab
         dice_tab = QWidget()
         v = QVBoxLayout(dice_tab)
-        self.gold_label = QLabel(); self.gold_label.setAlignment(Qt.AlignCenter)
-        self.dice_label = QLabel(); self.dice_label.setAlignment(Qt.AlignCenter)
-        self.message_label = QLabel("Welcome!"); self.message_label.setAlignment(Qt.AlignCenter)
+        self.gold_label = QLabel(); self.gold_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.dice_label = QLabel(); self.dice_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.message_label = QLabel("Welcome!"); self.message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.bet_btn = QPushButton("Bet 🎲"); self.bet_btn.clicked.connect(self.on_bet_clicked)
         self.btn_back = QPushButton("← Back to Games"); self.btn_back.clicked.connect(self.mw.show_games)
         v.addWidget(self.gold_label); v.addWidget(self.dice_label); v.addWidget(self.message_label)
         v.addWidget(self.bet_btn); v.addWidget(self.btn_back)
         self.tabs.addTab(dice_tab, "Dice")
+
+        # Scrap tab (always available for now)
+        self.scrap_tab = ScrapTab(self.game, self)
+        self.tabs.addTab(self.scrap_tab, "Scrap")
 
         # Slots tab (dynamic)
         self.slots_tab = SlotsTab(self.game, self.slots_mode)
@@ -127,6 +136,8 @@ class GameScreen(QWidget):
             self.tabs.addTab(self.roulette_tab, "Roulette")
         if self.game.roulette_unlocked:
             self.roulette_tab.refresh()
+        if self.scrap_tab:
+            self.scrap_tab.refresh()
 
     # Dice roll animation
     def on_bet_clicked(self):
@@ -182,11 +193,20 @@ class MainWindow(QWidget):
         self.stack.addWidget(self.game_play)       # index 3
         self.stack.addWidget(self.inventory_screen)# index 4
 
-        # GLOBAL currency bar at the top (always visible)
+        # GLOBAL top bar (currency + Home button)
         self.currency_bar = CurrencyBar(self.game)
+        topbar = QHBoxLayout()
+        topbar.setContentsMargins(8, 6, 8, 6)
+        topbar.setSpacing(8)
+        topbar_w = QWidget(); topbar_w.setLayout(topbar)
+        topbar.addWidget(self.currency_bar, 1)
+        topbar.addStretch(1)
+        self.btn_home = QPushButton("Home")
+        self.btn_home.clicked.connect(self.show_hub)
+        topbar.addWidget(self.btn_home, 0)
 
         root = QVBoxLayout(self)
-        root.addWidget(self.currency_bar)
+        root.addWidget(topbar_w)
         root.addWidget(self.stack)
         self.setLayout(root)
 
@@ -211,6 +231,9 @@ class MainWindow(QWidget):
     def show_hub(self):
         self.stack.setCurrentIndex(1)
         self._refresh_bar()
+        # Refresh hub widgets (e.g., achievements NEW badge)
+        if hasattr(self.hub, "refresh"):
+            self.hub.refresh()
 
     def show_games(self):
         self.games.refresh()
@@ -232,7 +255,7 @@ class MainWindow(QWidget):
     # -------- Settings & Upgrades --------
     def open_settings(self):
         dlg = SettingsDialog(self)
-        if dlg.exec() == QDialog.Accepted:
+        if dlg.exec() == QDialog.DialogCode.Accepted:
             dlg.apply()
 
     def open_global_upgrades(self):
@@ -245,12 +268,43 @@ class MainWindow(QWidget):
         dlg.exec()
         self.games.refresh()
 
+    def open_buildings_hub(self):
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Buildings Hub")
+        lay = QVBoxLayout(dlg)
+        hub = BuildingsHub(self.game, dlg)
+        lay.addWidget(hub)
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dlg.accept)
+        lay.addWidget(close_btn)
+        dlg.resize(700, 600)
+        dlg.exec()
+        # Refresh any screens that might depend on building changes
+        self.games.refresh()
+
+    def open_achievements(self):
+        dlg = AchievementsDialog(self.game, self)
+        dlg.exec()
+        # Currency may have changed (diamonds); refresh top bar
+        self._refresh_bar()
+
+    def open_bounties(self):
+        dlg = BountiesDialog(self.game, self)
+        dlg.exec()
+        self._refresh_bar()
+
+    def open_shop(self):
+        dlg = ShopDialog(self.game, self)
+        dlg.exec()
+        # currency or stats may change; refresh
+        self._refresh_bar()
+
     # -------- New game --------
     def new_game(self):
         if QMessageBox.question(
             self, "Confirm", "Start a new game? This erases current progress.",
-            QMessageBox.Yes | QMessageBox.No
-        ) == QMessageBox.Yes:
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        ) == QMessageBox.StandardButton.Yes:
             try:
                 if Path(SAVE_PATH).exists():
                     Path(SAVE_PATH).unlink()
@@ -281,6 +335,9 @@ class MainWindow(QWidget):
             self.game_play.refresh_all()
         elif idx == 4:
             self.inventory_screen.refresh()
+        elif idx == 1:
+            if hasattr(self.hub, "refresh"):
+                self.hub.refresh()
 
         self._refresh_bar()
         self.game.save(SAVE_PATH)
@@ -294,3 +351,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

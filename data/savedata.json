@@ -1,0 +1,431 @@
+{
+  "version": 0,
+  "gold": 971434.8943245998,
+  "lifetime_gold": 14601148.8943246,
+  "diamonds": 72,
+  "shards": 5939.414683390638,
+  "scrap": 87869.97007609741,
+  "scrap_idle": 24.0,
+  "base_dice": 1,
+  "slots_unlocked": true,
+  "roulette_unlocked": true,
+  "upgrades": [
+    {
+      "key": "global_income_1",
+      "level": 19
+    },
+    {
+      "key": "global_income_2",
+      "level": 1
+    },
+    {
+      "key": "global_income_3",
+      "level": 0
+    },
+    {
+      "key": "dice_qty_1",
+      "level": 0
+    },
+    {
+      "key": "dice_qty_2",
+      "level": 0
+    },
+    {
+      "key": "dice_qty_3",
+      "level": 0
+    },
+    {
+      "key": "faster_roller_1",
+      "level": 0
+    },
+    {
+      "key": "faster_roller_2",
+      "level": 0
+    },
+    {
+      "key": "more_sides_1",
+      "level": 0
+    },
+    {
+      "key": "slots_passive_1",
+      "level": 0
+    },
+    {
+      "key": "slots_passive_2",
+      "level": 0
+    },
+    {
+      "key": "roulette_maxbet_1",
+      "level": 15
+    },
+    {
+      "key": "roulette_payout_bonus_1",
+      "level": 4
+    },
+    {
+      "key": "roulette_passive_1",
+      "level": 2
+    },
+    {
+      "key": "roulette_passive_2",
+      "level": 0
+    },
+    {
+      "key": "b_kiosk",
+      "level": 44
+    },
+    {
+      "key": "b_bar",
+      "level": 12
+    },
+    {
+      "key": "b_pitboss",
+      "level": 7
+    },
+    {
+      "key": "b_vip",
+      "level": 8
+    },
+    {
+      "key": "b_hotel",
+      "level": 1
+    },
+    {
+      "key": "arcane_collector",
+      "level": 3
+    },
+    {
+      "key": "enchanted_fountain",
+      "level": 3
+    },
+    {
+      "key": "mythic_statue",
+      "level": 1
+    },
+    {
+      "key": "kiosk_efficiency_25",
+      "level": 1
+    },
+    {
+      "key": "kiosk_efficiency_50",
+      "level": 0
+    },
+    {
+      "key": "bar_mixology_25",
+      "level": 0
+    },
+    {
+      "key": "scrap_idle_1",
+      "level": 40
+    },
+    {
+      "key": "scrap_idle_2",
+      "level": 16
+    },
+    {
+      "key": "scrap_yield_1",
+      "level": 1
+    },
+    {
+      "key": "scrap_discount_1",
+      "level": 8
+    }
+  ],
+  "inv": [
+    {
+      "uid": 14,
+      "template_key": "aluminum_d12",
+      "level": 1,
+      "stars": 7
+    },
+    {
+      "uid": 26,
+      "template_key": "aluminum_d20",
+      "level": 1,
+      "stars": 0
+    },
+    {
+      "uid": 35,
+      "template_key": "aluminum_d4",
+      "level": 1,
+      "stars": 0
+    },
+    {
+      "uid": 16,
+      "template_key": "aluminum_d6",
+      "level": 1,
+      "stars": 1
+    },
+    {
+      "uid": 4,
+      "template_key": "aluminum_d8",
+      "level": 1,
+      "stars": 5
+    },
+    {
+      "uid": 23,
+      "template_key": "amethyst_d4",
+      "level": 13,
+      "stars": 0
+    },
+    {
+      "uid": 31,
+      "template_key": "bone_d6",
+      "level": 1,
+      "stars": 1
+    },
+    {
+      "uid": 34,
+      "template_key": "bone_d8",
+      "level": 1,
+      "stars": 0
+    },
+    {
+      "uid": 27,
+      "template_key": "clay_d12",
+      "level": 1,
+      "stars": 1
+    },
+    {
+      "uid": 24,
+      "template_key": "clay_d20",
+      "level": 1,
+      "stars": 3
+    },
+    {
+      "uid": 25,
+      "template_key": "clay_d4",
+      "level": 1,
+      "stars": 1
+    },
+    {
+      "uid": 30,
+      "template_key": "clay_d6",
+      "level": 1,
+      "stars": 2
+    },
+    {
+      "uid": 19,
+      "template_key": "clay_d8",
+      "level": 1,
+      "stars": 1
+    },
+    {
+      "uid": 36,
+      "template_key": "emerald_d12",
+      "level": 18,
+      "stars": 0
+    },
+    {
+      "uid": 29,
+      "template_key": "emerald_d6",
+      "level": 19,
+      "stars": 1
+    },
+    {
+      "uid": 28,
+      "template_key": "glass_d6",
+      "level": 12,
+      "stars": 1
+    },
+    {
+      "uid": 11,
+      "template_key": "glass_d8",
+      "level": 1,
+      "stars": 1
+    },
+    {
+      "uid": 21,
+      "template_key": "iron_d12",
+      "level": 1,
+      "stars": 0
+    },
+    {
+      "uid": 37,
+      "template_key": "lapis_d12",
+      "level": 1,
+      "stars": 0
+    },
+    {
+      "uid": 10,
+      "template_key": "lapis_d8",
+      "level": 21,
+      "stars": 0
+    },
+    {
+      "uid": 39,
+      "template_key": "obsidian_d8",
+      "level": 1,
+      "stars": 0
+    },
+    {
+      "uid": 17,
+      "template_key": "plastic_d12",
+      "level": 1,
+      "stars": 4
+    },
+    {
+      "uid": 22,
+      "template_key": "plastic_d20",
+      "level": 1,
+      "stars": 4
+    },
+    {
+      "uid": 32,
+      "template_key": "plastic_d4",
+      "level": 1,
+      "stars": 1
+    },
+    {
+      "uid": 2,
+      "template_key": "plastic_d6",
+      "level": 1,
+      "stars": 0
+    },
+    {
+      "uid": 13,
+      "template_key": "plastic_d8",
+      "level": 1,
+      "stars": 2
+    },
+    {
+      "uid": 40,
+      "template_key": "prism_d6",
+      "level": 1,
+      "stars": 0
+    },
+    {
+      "uid": 3,
+      "template_key": "resin_d20",
+      "level": 11,
+      "stars": 1
+    },
+    {
+      "uid": 5,
+      "template_key": "resin_d6",
+      "level": 1,
+      "stars": 0
+    },
+    {
+      "uid": 20,
+      "template_key": "stone_d12",
+      "level": 1,
+      "stars": 3
+    },
+    {
+      "uid": 33,
+      "template_key": "stone_d4",
+      "level": 1,
+      "stars": 0
+    },
+    {
+      "uid": 15,
+      "template_key": "stone_d6",
+      "level": 1,
+      "stars": 1
+    },
+    {
+      "uid": 18,
+      "template_key": "stone_d8",
+      "level": 1,
+      "stars": 2
+    },
+    {
+      "uid": 38,
+      "template_key": "volcanic_d6",
+      "level": 27,
+      "stars": 0
+    },
+    {
+      "uid": 12,
+      "template_key": "wooden_d20",
+      "level": 1,
+      "stars": 2
+    },
+    {
+      "uid": 7,
+      "template_key": "wooden_d4",
+      "level": 1,
+      "stars": 4
+    },
+    {
+      "uid": 8,
+      "template_key": "wooden_d6",
+      "level": 1,
+      "stars": 5
+    },
+    {
+      "uid": 1,
+      "template_key": "wooden_d8",
+      "level": 1,
+      "stars": 2
+    }
+  ],
+  "next_uid": 41,
+  "loadout": [
+    10,
+    3,
+    23,
+    38,
+    36
+  ],
+  "crates_basic_no_rare": 0,
+  "crates_opened": {
+    "basic": 87,
+    "advanced": 1,
+    "rare": 3,
+    "legendary": 2
+  },
+  "achievements_claimed": {
+    "unlock_slots": true,
+    "bld_10": true,
+    "bld_50": true,
+    "scrap_idle_1": true,
+    "scrap_1k": true,
+    "scrap_idle_5": true,
+    "unlock_roulette": true,
+    "lg_1k": true,
+    "lg_10k": true,
+    "lg_100k": true,
+    "builder:1": true,
+    "scrap_tycoon:1": true,
+    "high_roller:1": true,
+    "idle_gold_200": true,
+    "scrap_10k": true,
+    "cr_basic_10": true,
+    "crates_20": true,
+    "collection_20": true,
+    "high_roller:2": true,
+    "scrap_tycoon:2": true,
+    "leg_own_1": true
+  },
+  "achievements_seen": {},
+  "counter_dice_plays": 5,
+  "counter_slots_spins": 5,
+  "counter_slots_wins": 2,
+  "counter_roulette_spins": 0,
+  "counter_roulette_wins": 0,
+  "bounties_daily_claimed": {},
+  "bounties_weekly_claimed": {},
+  "bounties_daily_reset_at": 0,
+  "bounties_weekly_reset_at": 0,
+  "bounties_v2": {
+    "daily_reset_at": 1760241600,
+    "weekly_reset_at": 1760328000,
+    "daily_claimed": {
+      "daily_salvage_10": true
+    },
+    "weekly_claimed": {
+      "weekly_crates_20": true
+    },
+    "daily_keys": [
+      "daily_roulette_win_5",
+      "daily_salvage_10"
+    ],
+    "weekly_keys": [
+      "weekly_roulette_win_50",
+      "weekly_crates_20"
+    ]
+  },
+  "shop_levels": {}
+}

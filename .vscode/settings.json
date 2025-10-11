@@ -1,0 +1,10 @@
+{
+  // Hide reserved-name artifacts from file watcher and analysis
+  "files.watcherExclude": {
+    "**/CON": true
+  },
+  "python.analysis.exclude": [
+    "CON"
+  ]
+}
+
